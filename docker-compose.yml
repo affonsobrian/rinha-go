@@ -1,0 +1,52 @@
+services:
+  db:
+    image: postgres:alpine
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
+    ports:
+      - 5432:5432
+    volumes:
+      - postgres-db:/var/lib/postgresql/data
+      - ./script.sql:/docker-entrypoint-initdb.d/script.sql
+  api01:
+    build:
+      context: .
+      args:
+        - buildvcs=false
+    env_file:
+      - .env
+    depends_on:
+      - db
+    ports:
+      - 3000:3000
+    volumes:
+      - .:/usr/src/app
+    command: go run ./cmd/. -b 0.0.0.0
+  api02:
+    build:
+      context: .
+      args:
+        - buildvcs=false 
+    env_file:
+      - .env
+    depends_on:
+      - db
+    ports:
+      - 3001:3000
+    volumes:
+      - .:/usr/src/app
+    command: go run ./cmd/. -b 0.0.0.0
+  nginx:
+    image: nginx:latest
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - api01
+      - api02
+    ports:
+      - "9999:9999"
+  
+volumes:
+  postgres-db:
